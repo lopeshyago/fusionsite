@@ -1,18 +1,26 @@
-# Estágio de Servidor: Usa uma imagem leve do Nginx baseada em Alpine Linux
-FROM nginx:alpine
+# Estágio 1: Compilação do Tailwind
+FROM node:18-alpine AS build
+WORKDIR /app
 
-# Define o diretório de trabalho para onde o Nginx serve os arquivos
-WORKDIR /usr/share/nginx/html
-
-# Remove os arquivos padrão do Nginx para evitar conflitos
-RUN rm -rf ./*
-
-# Copia o index.html e outros arquivos estáticos para o container
-# Certifique-se de que o nome do seu arquivo é index.html
+# Copia os arquivos do projeto
 COPY . .
 
-# Expõe a porta 80 para o Easypanel
-EXPOSE 80
+# Instala o Tailwind CLI e compila o CSS
+# Substitua 'index.html' pelo nome do seu arquivo se for diferente
+RUN npx tailwindcss -i ./input.css -o ./style.css --minify
 
-# Inicia o Nginx em modo foreground
+# Estágio 2: Servidor de Produção
+FROM nginx:alpine
+WORKDIR /usr/share/nginx/html
+
+# Remove arquivos padrão
+RUN rm -rf ./*
+
+# Copia o HTML e o CSS compilado do estágio anterior
+COPY --from=build /app/index.html .
+COPY --from=build /app/style.css .
+# Se tiver imagens, copie a pasta public também
+# COPY --from=build /app/public ./public 
+
+EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
